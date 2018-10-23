@@ -31,12 +31,5 @@ wtmp.a = df.iloc[:,2]
 # incorporate the weight map into the graph as a property
 g.edge_properties['weight'] = wtmp
 
-
-# declare property map of vertex to store betweenness of vertex
-bet_vert = g.new_vertex_property("double")
-# declare property map of edge to store betweenness of edge
-bet_edge = g.new_edge_property("double")
-
-
 # save weight along with the network
 g.save("networkwithweight.xml.gz")
