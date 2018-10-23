@@ -4,10 +4,7 @@ import pickle
 from multiprocessing import Pool
 from threading import Thread
 
-
-
-
-# get a df and return 
+# get a df and return the graph with a list of names of nodes
 def networkbuilding(df):
     
     # first [0] and second [1] columns are nodes, the third [2] column is weight
@@ -30,6 +27,7 @@ def networkbuilding(df):
     # incorporate the weight map into the graph as a property
     g.edge_properties['weight'] = wtmp
     
+    #build a list of names of the nodes
     namelist= []
     for i in namemap:
         namelist.append(i)
@@ -41,21 +39,27 @@ def networkbuilding(df):
 
 def process(odf):
     
-    g, names = networkbuilding(odf)
+    g, names = networkbuilding(odf) # using networkbuilding function to build graph and the name of nodes
    
-    country = odf.iloc[0,3]
+    country = odf.iloc[0,3] # get country code from the dataframe
   
-    Thread(target = calc,args=('bet',g, names,country)).start()
-    Thread(target = calc,args=('clo',g, names,country)).start()
-    Thread(target = calc,args=('eig',g, names,country)).start()
+    # create three threads to calculate each network centrality score 
+    Thread(target = calc,args=('bet', g, names,country)).start()
+    Thread(target = calc,args=('clo', g, names,country)).start()
+    Thread(target = calc,args=('eig', g, names,country)).start()
 
 
 
-
-def calc(calctype, g, names, country):
+# the multi-functions function 
+# arguments:
+#   calctype: 'bet' for betweenness; 'clo' for closeness; 'eig' for eigenvector
+#   g: the graph
+#   names: a list of names of each nodes
+#   country: country code for naming the dataframe
+def calc(calctype, g, names, country): 
     
-    if calctype == 'bet':
-    
+    # for betweenness    
+    if calctype == 'bet': 
     
         # declare property map of vertex to store betweenness of vertex
         bet_vert = g.new_vertex_property("double")
@@ -68,40 +72,46 @@ def calc(calctype, g, names, country):
         graph_tool.centrality.betweenness(g, pivots=None, vprop=bet_vert, eprop=bet_edge, 
                                           weight=g.edge_properties['weight'], norm=False)
         
-
+        # save to dataframe
         resultdf = pd.DataFrame({'code':names,'betweenness':bet_vert.a})
         
-    
-    elif calctype =='clo':
+    # for closeness
+    elif calctype =='clo': 
         # declare property map of vertex to store closeness of vertex
         clo_vert = g.new_vertex_property("double")
-
+        
+        #calculation
         graph_tool.centrality.closeness(g, weight=g.edge_properties['weight'], source=None, 
                                         vprop=clo_vert, norm=True, harmonic=False)
-
-        g.vertex_properties['VertexCloseness'] = clo_vert
         
+        # save to dataframe
         resultdf = pd.DataFrame({'code':names,'closeness':clo_vert.a})
     
     elif calctype == 'eig':
 
         # declare property map of vertex to store eigenvector of vertex
         eig_vert = g.new_vertex_property("double")
-
+        
+        #calculation
         graph_tool.centrality.eigenvector(g, weight=g.edge_properties['weight'], 
                                           vprop=eig_vert, epsilon=1e-06, max_iter=None)
-
+        # save to dataframe
         resultdf = pd.DataFrame({'code':names,'VertesEigenvector':eig_vert.a})
     
     else:
         return 0
-
+    
+    # save to files
     resultdf.to_pickle(calctype+country+'.pkl')
 
+#read file 
+# loc.pkl is a list of dataframes. the dataframes' columns are:
+# |node1 | node2 | weight | node1country | ……|
+loc = pickle.load( open( "loc.pkl", "rb" ) ) 
 
-loc = pickle.load( open( "loc.pkl", "rb" ) )
-
-
+# create 16 threads
 p = Pool(16)
+
+# using 16 threads to process all elements in loc
 p.map(process, loc)
 
