@@ -89,7 +89,7 @@ def calc(calctype, g, names, country):
     
     elif calctype == 'eig':
 
-        ee, eigp = eigenvector(g, weight = wt)
+        ee, eigp = eigenvector(g, weight = g.edge_properties['weight'])
         
         # save to dataframe
         resultdf = pd.DataFrame({'code':names,'VertesEigenvector':eigp.a})
