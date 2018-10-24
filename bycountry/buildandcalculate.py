@@ -89,14 +89,10 @@ def calc(calctype, g, names, country):
     
     elif calctype == 'eig':
 
-        # declare property map of vertex to store eigenvector of vertex
-        eig_vert = g.new_vertex_property("double")
+        ee, eigp = eigenvector(g, weight = wt)
         
-        #calculation
-        graph_tool.centrality.eigenvector(g, weight=g.edge_properties['weight'], 
-                                          vprop=eig_vert, epsilon=1e-06, max_iter=None)
         # save to dataframe
-        resultdf = pd.DataFrame({'code':names,'VertesEigenvector':eig_vert.a})
+        resultdf = pd.DataFrame({'code':names,'VertesEigenvector':eigp.a})
     
     else:
         return 0
