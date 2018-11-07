@@ -24,8 +24,13 @@ struct weighted_edge
   int sourceCountry, targetCountry;
 }; // define an weighted edge struct
 
+struct sample
+{
+  int companyCode, companyCountry;
+}; // define a test sample
+
 //std::vector<weighted_edge>
-void readfile(std::vector<weighted_edge>* edgeVector, int* vertexCount, int* edgeCount, const std::string& fileLocation)
+void readedgelist(std::vector<weighted_edge>* edgeVector, int* vertexCount, int* edgeCount, const std::string& fileLocation)
 {
 
   std::ifstream inStream;
@@ -65,17 +70,48 @@ void readfile(std::vector<weighted_edge>* edgeVector, int* vertexCount, int* edg
   *edgeCount = edgeCounter;
 }
 
+void readSampleList(std::vector<sample>* sampleVector, int* sampleCount, const std::string& fileLocation)
+{
+
+  std::ifstream inStream;
+  std::string passphase;
+  inStream.open(fileLocation);
+  if (inStream.fail())
+  {
+      std::cout << "Reading file error.";
+
+  }
+
+  int sampleCounter = 0;
+  while(inStream>>passphase)
+  {
+  //        cout<<passphase;
+
+      std::vector<std::string> sampleCodeAndCountry;
+      boost::split(sampleCodeAndCountry, passphase, [](char c){return c == ',';});
+
+      sample newSample;
+      newSample.companyCode = stoi(sampleCodeAndCountry[0]);
+      newSample.companyCountry = stoi(sampleCodeAndCountry[1]);
+
+      sampleVector->push_back(newSample);
+      sampleCounter++;
+  }
+  inStream.close();
+
+  *sampleCount = sampleCounter;
+}
+
 
 template<typename Graph>
 void
-run_weighted_test(Graph*, int V, std::vector<weighted_edge> edge_init, int E, int companyCode)
+run_weighted_test(Graph*, int V, std::vector<weighted_edge> edge_init, int E, int baseCompany, int baseCountry)
 {
   Graph g(V);
   typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
   typedef typename boost::graph_traits<Graph>::vertex_iterator vertex_iterator;
   typedef typename boost::graph_traits<Graph>::edge_descriptor Edge;
 
-  int basecountry = edge_init[companyCode];
 
   std::vector<Vertex> vertices(V);
   {
@@ -91,8 +127,8 @@ run_weighted_test(Graph*, int V, std::vector<weighted_edge> edge_init, int E, in
   std::vector<Edge> edges(E);
   for (int e = 0; e < E; ++e) {
 
-    if (((edge_init[e].source != companyCode) && (edge_init[e].target != companyCode)) // when, both the source and the target is NOT base company, and,
-        && ((edge_init[e].sourceCountry == basecountry) ||  (edge_init[e].sourceCountry == basecountry))) // either the source or the targe is in the base counry
+    if (((edge_init[e].source != baseCompany) && (edge_init[e].target != baseCompany)) // when, both the source and the target is NOT base company, and,
+        && ((edge_init[e].sourceCountry == baseCountry) ||  (edge_init[e].sourceCountry == baseCountry))) // either the source or the targe is in the base counry
           continue; // droup the edge
 
     // otherwise: either the source and the target is the base company, or, both source and the target is out of the base country
@@ -100,27 +136,33 @@ run_weighted_test(Graph*, int V, std::vector<weighted_edge> edge_init, int E, in
     edgeAddedCounter++;
   }
 
-  std::cout << edgeAddedCounter << '\n';
-/*
+  std::cout <<"sample number" << baseCompany << "edge actually added:" << edgeAddedCounter << '\n';
+
   std::vector<double> centrality(V);
   brandes_betweenness_centrality(
     g,
     centrality_map(
-      make_iterator_property_map(centrality.begin(), get(vertex_index, g),
+      make_iterator_property_map(centrality.begin(), get(boost::vertex_index, g),
                                  double()))
-    .vertex_index_map(get(vertex_index, g)).weight_map(get(edge_weight, g)));
+    .vertex_index_map(get(boost::vertex_index, g)).weight_map(get(boost::edge_weight, g)));
 
-  for (int v = 0; v < V; ++v) {
-      std::cout << centrality[v] << std::endl;
+    std::ofstream graphStream;
+    graphStream.open(std::to_string(baseCompany)+"at"+std::to_string(baseCompany)+".txt");
+    for (int v = 0; v < V; ++v) {
+      graphStream << v << "," << centrality[v] << std::endl;
     }
-  */
+    graphStream.close();
 }
 
 
 int main(int argc, char* argv[])
 {
-  std::string filePathAndName = "rel3Country.csv";
-  int companyCode = 1;
+  std::string edgeListFile = "rel3Country.csv";
+  std::string sampleListFile = "sample.csv";
+
+  std::vector<sample> sampleList;
+  int sampleCount = 0;
+
 
   typedef boost::adjacency_list<boost::listS, boost::listS, boost::undirectedS,
                          boost::property<boost::vertex_index_t, int>, EdgeProperties>
@@ -128,20 +170,20 @@ int main(int argc, char* argv[])
 
   std::vector<weighted_edge> edgeVector;
   int vCount, eCount;
+  readSampleList(&sampleList, &sampleCount, sampleListFile); // Read a list of sample companies
+  readedgelist(&edgeVector, &vCount, &eCount, edgeListFile); // read the edge list
+
+  for (int i =0; i<sampleCount; i++)
+  {
+    std::cout << "Have Sample:" << sampleList[i].companyCode << " in Country number " <<sampleList[i].companyCountry << '\n';
+  }
 
 
-  readfile(&edgeVector, &vCount, &eCount, filePathAndName);
-
-  std::cout << "vertex count before:" << vCount << '\n';
-  std::cout << "edge count before:" << eCount << '\n';
-
-
-  run_weighted_test((Graph*)0, vCount, edgeVector, eCount, companyCode);
-  /*
-
-  std::cout << "vertex count after:" << vCount << '\n';
-  std::cout << "edge count after:" << eCount << '\n';
-*/
+  for (int i =0; i<sampleCount; i++)
+  {
+      std::cout << "Processing Sample:" << sampleList[i].companyCode << " in Country number " <<sampleList[i].companyCountry << '\n';
+      run_weighted_test((Graph*)0, vCount, edgeVector, eCount, sampleList[i].companyCode, sampleList[i].companyCountry);
+  }
 
   return 0;
 }
