@@ -67,7 +67,8 @@ tuples = []
 for company in companylist:
     if company[1] not in vertexlist:
         tuples.append(tuple(company))
-    print (company[1]+' is skipped')
+    else:
+        print (company[1]+' is skipped')
 
 
 p = Pool(4)
