@@ -52,8 +52,20 @@ def calc(tup):
 
 #read file
 inputdf = pd.read_pickle("3relwithcountryrevised.pkl")
-c2cty = pd.read_pickle("c2ctyBatch2.pkl")
-tuples = [tuple(x) for x in c2cty.reset_index().values]
+companylist = pd.read_pickle("batch1_2.pkl").reset_index().values
+
+#read existing csvfiles and get vertexlist already calculated
+vertexlist = []
+filelist = os.listdir()
+for item in filelist:
+        vertexlist.append(item[7:-4])
+
+# build a  list  of tuples, test all record in pickled DataFrame against existing file 
+# and add those not calculated to tuple list.
+tuples = []
+for company in companylist:
+    if company[1] not in vertexlist:
+        tuples.append(tuple(x))
 
 p = Pool(72)
 p.map(calc,tuples)
